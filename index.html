@@ -154,6 +154,8 @@ background:#ef4444;
 <option value="Cash Out">Cash Out</option>
 <option value="Load">Load</option>
 <option value="Bank / E-Wallet Transfer">Bank / E-Wallet Transfer</option>
+<option value="Capital Deposit">Capital Deposit</option>
+<option value="Capital Withdrawal">Capital Withdrawal</option>
 </select>
 <div class="button-group">
 <button id="setChargeBtn">Set Charge Fee</button>
@@ -213,6 +215,22 @@ background:#ef4444;
 </div>
 </div>
 
+<!-- CAPITAL -->
+<div id="capitalFields" style="display:none;margin-top:10px;">
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<input type="date" id="capitalDate" style="flex:1 1 45%;">
+<select id="capitalMethod" style="flex:1 1 45%;">
+<option value="GCash">GCash</option>
+<option value="Cash">Cash</option>
+</select>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+<input type="number" id="capitalAmount" placeholder="Amount" style="flex:1 1 45%;">
+<input type="text" id="capitalNote" placeholder="Note (optional)" style="flex:1 1 45%;">
+</div>
+</div>
+
 <button id="addBtn" class="add">Add Transaction</button>
 </div>
 
@@ -259,6 +277,8 @@ Total Profit Today: ₱ <span id="dailyTotal">0</span>
 <option value="Cash Out">Cash Out</option>
 <option value="Load">Load</option>
 <option value="Bank / E-Wallet Transfer">Bank / E-Wallet Transfer</option>
+<option value="Capital Deposit">Capital Deposit</option>
+<option value="Capital Withdrawal">Capital Withdrawal</option>
 </select>
 <input type="date" id="recordsDate">
 <button id="showRecordsBtn">Show Records</button>
@@ -293,9 +313,12 @@ let capital = JSON.parse(localStorage.getItem("gcashCapital")) || { gcash: 0, ca
 
 document.getElementById("transactionType").addEventListener("change",function(){
 const type=this.value;
+
 document.getElementById("cashFields").style.display=(type==="Cash In"||type==="Cash Out")?"block":"none";
 document.getElementById("loadFields").style.display=(type==="Load")?"block":"none";
 document.getElementById("bankFields").style.display=(type==="Bank / E-Wallet Transfer")?"block":"none";
+document.getElementById("capitalFields").style.display=(type==="Capital Deposit"||type==="Capital Withdrawal")?"block":"none";
+
 });
 
 document.getElementById("setChargeBtn").onclick=()=>{
@@ -363,6 +386,24 @@ if(!bankType||!date||!amount||!name||!number){alert("Fill all fields");return;}
 record.date=date; record.mobile="-"; record.sender="Bank / E-Wallet Transfer"; record.amount=amount; record.reference=reference; record.mode=`${bankType} / ${name}`; record.charge=charge;
 }
 
+else if(type==="Capital Deposit" || type==="Capital Withdrawal"){
+
+let date=document.getElementById("capitalDate").value || today;
+let method=document.getElementById("capitalMethod").value;
+let amount=document.getElementById("capitalAmount").value;
+let note=document.getElementById("capitalNote").value || "-";
+
+if(!amount){alert("Enter amount"); return;}
+
+record.date=date;
+record.mobile="-";
+record.sender=method;
+record.amount=amount;
+record.reference=note;
+record.charge=0;
+
+}
+
 records.unshift(record);
 localStorage.setItem("gcashRecords",JSON.stringify(records));
 renderDaily();
@@ -404,7 +445,21 @@ let amt = parseFloat(r.amount) || 0;
                 gcashBalance -= amt;
                 cashOnHand += amt;
                 break;
+            case "Capital Deposit":
+
+            if(r.sender==="GCash") gcashBalance += amt;
+            if(r.sender==="Cash") cashOnHand += amt;
+
+        break;
+
+            case "Capital Withdrawal":
+
+            if(r.sender==="GCash") gcashBalance -= amt;
+            if(r.sender==="Cash") cashOnHand -= amt;
+
+        break;
         }
+
 
 
 let row=`<tr>
@@ -438,8 +493,23 @@ header.innerHTML=`<tr><th>Date</th><th>Type</th><th>Mobile / Sender</th><th>Amou
 body.innerHTML="";
 let total=0;
 filtered.forEach(r=>{
-let accountSender=r.type==="Bank / E-Wallet Transfer"?r.mode:(r.sender||"-");
-let mobileSender=r.type==="Bank / E-Wallet Transfer"? "-" : (r.mobile||r.sender||"-");
+
+let accountSender="-";
+let mobileSender="-";
+
+if(r.type==="Bank / E-Wallet Transfer"){
+accountSender=r.mode;
+mobileSender="-";
+}
+else if(r.type==="Capital Deposit" || r.type==="Capital Withdrawal"){
+accountSender=r.sender; // GCash or Cash
+mobileSender="Capital";
+}
+else{
+accountSender=r.sender || "-";
+mobileSender=r.mobile || "-";
+}
+
 
 let index = records.indexOf(r);
 
