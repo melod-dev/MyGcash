@@ -31,12 +31,27 @@ th{background:#f2f2f2;}
 #chargePopupContent button,#recordsPopupContent button{margin-top:15px;padding:8px 12px;border:none;background:#007aff;color:white;border-radius:6px;cursor:pointer;width:100%;}
 #chargePopupContent button:hover,#recordsPopupContent button:hover{background:#005ecb;}
 .table-container{max-height:300px;overflow-y:auto;margin-top:10px;}
+
 @media(max-width:700px){
 
 th,td{
-font-size:12px;
-padding:5px;
+font-size:10px;
+padding:4px;
+word-break:break-word;
 }
+
+table{
+table-layout:fixed;
+width:100%;
+}
+
+td:nth-child(1){width:70px;}   /* Date */
+td:nth-child(2){width:60px;}   /* Type */
+td:nth-child(3){width:90px;}   /* Mobile */
+td:nth-child(4){width:70px;}   /* Amount */
+td:nth-child(5){width:90px;}   /* Reference */
+td:nth-child(6){width:90px;}   /* Account */
+td:nth-child(7){width:60px;}   /* Charge */
 
 #chargePopupContent input,
 #recordsPopupContent input,
@@ -44,25 +59,11 @@ padding:5px;
 width:90%;
 }
 
-.table-container{
-overflow-x:auto;
-}
-
-#recordsPopupContent table{
-min-width:650px;
-}
-
 }
 
 /* Swipe actions */
 .swipe-row{
 position:relative;
-overflow:hidden;
-}
-
-.swipe-content{
-transition:transform 0.25s ease;
-background:white;
 }
 
 .swipe-actions{
@@ -71,16 +72,18 @@ right:0;
 top:0;
 height:100%;
 display:flex;
-transform:translateX(100%);
-transition:transform 0.25s ease;
+opacity:0;
+pointer-events:none;
+transition:opacity 0.2s;
 }
 
 .swipe-row.active .swipe-actions{
-transform:translateX(0);
+opacity:1;
+pointer-events:auto;
 }
 
 .swipe-actions button{
-width:50px;
+width:45px;
 border:none;
 color:white;
 font-size:16px;
@@ -94,6 +97,7 @@ background:#3b82f6;
 .deleteBtn{
 background:#ef4444;
 }
+
 </style>
 </head>
 <body>
@@ -457,38 +461,39 @@ renderPopupRecords();
 }
 
 }
+//swipe script
 let startX=0;
-let activeRow=null;
+let currentRow=null;
 
 document.addEventListener("touchstart",function(e){
 
 let row=e.target.closest(".swipe-row");
 if(!row) return;
 
-activeRow=row;
+currentRow=row;
 startX=e.touches[0].clientX;
 
 });
 
 document.addEventListener("touchmove",function(e){
 
-if(!activeRow) return;
+if(!currentRow) return;
 
 let moveX=e.touches[0].clientX;
 let diff=startX-moveX;
 
-if(diff>40){   // swipe left
-activeRow.classList.add("active");
+if(diff>60){
+currentRow.classList.add("active");
 }
 
-if(diff<-40){  // swipe right
-activeRow.classList.remove("active");
+if(diff<-60){
+currentRow.classList.remove("active");
 }
 
 });
 
 document.addEventListener("touchend",function(){
-activeRow=null;
+currentRow=null;
 });
 
 document.addEventListener("click",function(e){
@@ -512,6 +517,7 @@ r.classList.remove("active");
 }
 
 });
+
 </script>
 
 </body>
