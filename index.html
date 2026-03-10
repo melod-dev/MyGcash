@@ -31,7 +31,28 @@ th{background:#f2f2f2;}
 #chargePopupContent button,#recordsPopupContent button{margin-top:15px;padding:8px 12px;border:none;background:#007aff;color:white;border-radius:6px;cursor:pointer;width:100%;}
 #chargePopupContent button:hover,#recordsPopupContent button:hover{background:#005ecb;}
 .table-container{max-height:300px;overflow-y:auto;margin-top:10px;}
-@media(max-width:700px){th,td{font-size:12px;padding:5px;}#chargePopupContent input,#recordsPopupContent input,#recordsPopupContent select{width:90%;}}
+@media(max-width:700px){
+
+th,td{
+font-size:12px;
+padding:5px;
+}
+
+#chargePopupContent input,
+#recordsPopupContent input,
+#recordsPopupContent select{
+width:90%;
+}
+
+.table-container{
+overflow-x:auto;
+}
+
+#recordsPopupContent table{
+min-width:650px;
+}
+
+}
 
 /* Swipe actions */
 .swipe-row{
@@ -40,7 +61,7 @@ overflow:hidden;
 }
 
 .swipe-content{
-transition:transform 0.3s;
+transition:transform 0.25s ease;
 background:white;
 }
 
@@ -50,13 +71,19 @@ right:0;
 top:0;
 height:100%;
 display:flex;
+transform:translateX(100%);
+transition:transform 0.25s ease;
+}
+
+.swipe-row.active .swipe-actions{
+transform:translateX(0);
 }
 
 .swipe-actions button{
-width:60px;
+width:50px;
 border:none;
 color:white;
-font-size:18px;
+font-size:16px;
 cursor:pointer;
 }
 
@@ -321,39 +348,29 @@ filtered.forEach(r=>{
 let accountSender=r.type==="Bank / E-Wallet Transfer"?r.mode:(r.sender||"-");
 let mobileSender=r.type==="Bank / E-Wallet Transfer"? "-" : (r.mobile||r.sender||"-");
 
+let index = records.indexOf(r);
+
 let row=`
-<tr class="swipe-row" data-index="${records.indexOf(r)}">
+<tr class="swipe-row" data-index="${index}">
 
-<td colspan="7">
+<td class="swipe-content">${r.date}</td>
+<td class="swipe-content">${r.type}</td>
+<td class="swipe-content">${mobileSender}</td>
+<td class="swipe-content">₱${r.amount}</td>
+<td class="swipe-content">${r.reference||"-"}</td>
+<td class="swipe-content">${accountSender}</td>
+<td class="swipe-content">₱${r.charge}</td>
 
-<div class="swipe-content">
-
-<table style="width:100%">
-<tr>
-<td>${r.date}</td>
-<td>${r.type}</td>
-<td>${mobileSender}</td>
-<td>₱${r.amount}</td>
-<td>${r.reference||"-"}</td>
-<td>${accountSender}</td>
-<td>₱${r.charge}</td>
-</tr>
-</table>
-
-</div>
-
+<td>
 <div class="swipe-actions">
-
-<button class="editBtn" onclick="editRecord(${records.indexOf(r)})">✏️</button>
-
-<button class="deleteBtn" onclick="deleteRecord(${records.indexOf(r)})">🗑️</button>
-
+<button class="editBtn" onclick="editRecord(${index})">✏️</button>
+<button class="deleteBtn" onclick="deleteRecord(${index})">🗑️</button>
 </div>
-
 </td>
 
 </tr>
 `;
+
 body.innerHTML+=row;
 total+=parseFloat(r.charge)||0;
 });
@@ -440,38 +457,59 @@ renderPopupRecords();
 }
 
 }
+let startX=0;
+let activeRow=null;
 
 document.addEventListener("touchstart",function(e){
 
 let row=e.target.closest(".swipe-row");
-
 if(!row) return;
 
-let startX=e.touches[0].clientX;
+activeRow=row;
+startX=e.touches[0].clientX;
 
-row.addEventListener("touchmove",function(ev){
+});
 
-let moveX=ev.touches[0].clientX;
+document.addEventListener("touchmove",function(e){
 
+if(!activeRow) return;
+
+let moveX=e.touches[0].clientX;
 let diff=startX-moveX;
 
-let content=row.querySelector(".swipe-content");
+if(diff>40){   // swipe left
+activeRow.classList.add("active");
+}
 
-if(diff>0 && diff<120){
-
-content.style.transform="translateX(-"+diff+"px)";
-
+if(diff<-40){  // swipe right
+activeRow.classList.remove("active");
 }
 
 });
 
-row.addEventListener("touchend",function(){
-
-let content=row.querySelector(".swipe-content");
-
-content.style.transform="translateX(-120px)";
-
+document.addEventListener("touchend",function(){
+activeRow=null;
 });
+
+document.addEventListener("click",function(e){
+
+let row=e.target.closest(".swipe-row");
+
+if(row){
+
+document.querySelectorAll(".swipe-row").forEach(r=>{
+if(r!==row) r.classList.remove("active");
+});
+
+row.classList.toggle("active");
+
+}else{
+
+document.querySelectorAll(".swipe-row").forEach(r=>{
+r.classList.remove("active");
+});
+
+}
 
 });
 </script>
