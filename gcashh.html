@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Load & GCash Business Tracker</title>
+<style>
+/* ... same CSS as before ... */
+body{font-family:Arial,sans-serif;background:#fff;margin:0;padding:20px;}
+.container{max-width:700px;margin:auto;background:#f9f9f9;padding:20px;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.1);}
+.logo{text-align:center;margin-bottom:20px;}
+.logo img{width:120px;}
+.logo h2{margin:5px;color:#333;}
+.transaction{margin-top:20px;}
+.transaction-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.transaction-header select{width:150px;padding:10px;border-radius:8px;border:1px solid #ddd;}
+.button-group{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;}
+.button-group button{padding:8px 12px;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;}
+.button-group button:hover{background:#16a34a;}
+.transaction input,.transaction select{padding:12px;margin-top:10px;border-radius:8px;border:1px solid #ddd;}
+.transaction input[readonly]{background:#e0e0e0;}
+.transaction button.add{width:100%;padding:12px;margin-top:15px;border:none;border-radius:8px;background:#007aff;color:white;font-weight:bold;cursor:pointer;}
+.transaction button.add:hover{background:#005ecb;}
+table{width:100%;margin-top:20px;border-collapse:collapse;}
+th,td{padding:10px;border-bottom:1px solid #ddd;text-align:center;}
+th{background:#f2f2f2;}
+.total{margin-top:10px;font-weight:bold;text-align:right;}
+#chargePopup,#recordsPopup{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:999;}
+#chargePopupContent,#recordsPopupContent{background:white;padding:20px;border-radius:10px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;text-align:center;}
+#chargePopupContent input,#recordsPopupContent input,#recordsPopupContent select{width:60%;padding:10px;margin-top:10px;border-radius:6px;border:1px solid #ccc;}
+#chargePopupContent button,#recordsPopupContent button{margin-top:15px;padding:8px 12px;border:none;background:#007aff;color:white;border-radius:6px;cursor:pointer;width:100%;}
+#chargePopupContent button:hover,#recordsPopupContent button:hover{background:#005ecb;}
+.table-container{max-height:300px;overflow-y:auto;margin-top:10px;}
+@media(max-width:700px){th,td{font-size:12px;padding:5px;}#chargePopupContent input,#recordsPopupContent input,#recordsPopupContent select{width:90%;}}
+
+/* Swipe actions */
+.swipe-row{
+position:relative;
+overflow:hidden;
+}
+
+.swipe-content{
+transition:transform 0.3s;
+background:white;
+}
+
+.swipe-actions{
+position:absolute;
+right:0;
+top:0;
+height:100%;
+display:flex;
+}
+
+.swipe-actions button{
+width:60px;
+border:none;
+color:white;
+font-size:18px;
+cursor:pointer;
+}
+
+.editBtn{
+background:#3b82f6;
+}
+
+.deleteBtn{
+background:#ef4444;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<div class="logo">
+<img src="gcashlogo.png">
+<h2>Load & GCash Business</h2>
+</div>
+
+<div class="transaction">
+<div class="transaction-header">
+<select id="transactionType">
+<option value="Cash In">Cash In</option>
+<option value="Cash Out">Cash Out</option>
+<option value="Load">Load</option>
+<option value="Bank / E-Wallet Transfer">Bank / E-Wallet Transfer</option>
+</select>
+<div class="button-group">
+<button id="setChargeBtn">Set Charge Fee</button>
+<button id="viewRecordsBtn">View Records</button>
+</div>
+</div>
+
+<!-- CASH -->
+<div id="cashFields" style="display:none;margin-top:10px;">
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<input type="date" id="cashDate" style="flex:1 1 45%;">
+<input type="text" id="mobileNumber" placeholder="Mobile Number" style="flex:1 1 45%;">
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+<input type="text" id="senderRecipient" placeholder="Sender / Recipient" style="flex:1 1 45%;">
+<input type="number" id="cashAmount" placeholder="Amount" style="flex:1 1 45%;">
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+<input type="number" id="chargeFee" placeholder="Charge Fee" readonly style="flex:1 1 45%;">
+<input type="text" id="referenceNumber" placeholder="Reference Number" style="flex:1 1 45%;">
+</div>
+</div>
+
+<!-- LOAD -->
+<div id="loadFields" style="display:none;margin-top:10px;">
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<select id="loadOperator" style="flex:1 1 45%;">
+<option value="">Select Operator</option>
+<option value="Globe">Globe</option>
+<option value="TM">TM</option>
+<option value="SMART">SMART</option>
+<option value="TNT">TNT</option>
+</select>
+<input type="text" id="loadNumber" placeholder="Mobile Number" style="flex:1 1 45%;">
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+<input type="number" id="loadAmount" placeholder="Amount" style="flex:1 1 45%;">
+<input type="number" id="loadChargeFee" placeholder="Charge Fee" readonly style="flex:1 1 45%;">
+</div>
+</div>
+
+<!-- BANK -->
+<div id="bankFields" style="display:none;margin-top:10px;">
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<input type="text" id="bankType" placeholder="Type of Bank / E-Wallet" style="flex:1 1 45%;">
+<input type="date" id="bankDate" style="flex:1 1 45%;">
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+<input type="number" id="bankAmount" placeholder="Amount" style="flex:1 1 45%;">
+<input type="text" id="accountName" placeholder="Account Name" style="flex:1 1 45%;">
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+<input type="text" id="accountNumber" placeholder="Account Number" style="flex:1 1 45%;">
+<input type="text" id="referenceBank" placeholder="Reference Number" style="flex:1 1 45%;">
+<input type="number" id="bankChargeFee" placeholder="Service Fee" readonly style="flex:1 1 45%;">
+</div>
+</div>
+
+<button id="addBtn" class="add">Add Transaction</button>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Type</th>
+<th>Mobile / Sender</th>
+<th>Amount</th>
+<th>Reference / Account</th>
+<th>Account / Sender</th>
+<th>Charge / Profit</th>
+</tr>
+</thead>
+<tbody id="dailyRecords"></tbody>
+</table>
+<div class="total">
+Total Profit Today: ₱ <span id="dailyTotal">0</span>
+</div>
+</div>
+
+<!-- Charge Popup -->
+<div id="chargePopup">
+<div id="chargePopupContent">
+<h3 id="popupTitle">Set Charge Fee</h3>
+<input type="number" id="popupFee" value="5">
+<button id="saveChargeBtn">Save</button>
+</div>
+</div>
+
+<!-- Records Popup -->
+<div id="recordsPopup">
+<div id="recordsPopupContent">
+<h3>View Transaction Records</h3>
+<select id="recordsType">
+<option value="All">All Types</option>
+<option value="Cash In">Cash In</option>
+<option value="Cash Out">Cash Out</option>
+<option value="Load">Load</option>
+<option value="Bank / E-Wallet Transfer">Bank / E-Wallet Transfer</option>
+</select>
+<input type="date" id="recordsDate">
+<button id="showRecordsBtn">Show Records</button>
+<div class="table-container">
+<table>
+<thead id="popupHeader"></thead>
+<tbody id="popupRecords"></tbody>
+</table>
+<div class="total">
+Total Profit: ₱ <span id="popupTotal">0</span>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+let chargeFees={"Cash In":5,"Cash Out":5,"Load":2,"Bank / E-Wallet Transfer":2};
+let records=JSON.parse(localStorage.getItem("gcashRecords"))||[];
+
+document.getElementById("transactionType").addEventListener("change",function(){
+const type=this.value;
+document.getElementById("cashFields").style.display=(type==="Cash In"||type==="Cash Out")?"block":"none";
+document.getElementById("loadFields").style.display=(type==="Load")?"block":"none";
+document.getElementById("bankFields").style.display=(type==="Bank / E-Wallet Transfer")?"block":"none";
+});
+
+document.getElementById("setChargeBtn").onclick=()=>{
+const type=document.getElementById("transactionType").value;
+document.getElementById("popupFee").value=chargeFees[type];
+document.getElementById("popupTitle").innerText=`Set ${type} Charge Fee`;
+document.getElementById("chargePopup").style.display="flex";
+};
+document.getElementById("saveChargeBtn").onclick=()=>{
+const type=document.getElementById("transactionType").value;
+chargeFees[type]=parseFloat(document.getElementById("popupFee").value)||0;
+document.getElementById("chargePopup").style.display="none";
+updateAllCharges();
+};
+document.getElementById("chargePopup").onclick=function(e){if(e.target==this)this.style.display="none";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){document.getElementById("chargePopup").style.display="none";document.getElementById("recordsPopup").style.display="none";}});
+
+document.getElementById("viewRecordsBtn").onclick=()=>{renderPopupRecords(); document.getElementById("recordsPopup").style.display="flex";}
+document.getElementById("recordsPopup").onclick=function(e){if(e.target==this)this.style.display="none";}
+document.getElementById("showRecordsBtn").onclick=()=>{renderPopupRecords();}
+
+function calculateCashCharge(){let type=document.getElementById("transactionType").value;if(type!=="Cash In"&&type!=="Cash Out") return;let amt=parseFloat(document.getElementById("cashAmount").value)||0;let base=chargeFees[type];let mult=Math.ceil(amt/500);if(amt<=0) mult=0;document.getElementById("chargeFee").value=base*mult;}
+document.getElementById("cashAmount").addEventListener("input",calculateCashCharge);
+
+function calculateLoadCharge(){let amt=parseFloat(document.getElementById("loadAmount").value)||0;document.getElementById("loadChargeFee").value=(amt>0?chargeFees["Load"]:0);}
+document.getElementById("loadAmount").addEventListener("input",calculateLoadCharge);
+
+function calculateBankCharge(){let amt=parseFloat(document.getElementById("bankAmount").value)||0;document.getElementById("bankChargeFee").value=(amt>0?chargeFees["Bank / E-Wallet Transfer"]:0);}
+document.getElementById("bankAmount").addEventListener("input",calculateBankCharge);
+
+function updateAllCharges(){calculateCashCharge(); calculateLoadCharge(); calculateBankCharge();}
+
+document.getElementById("addBtn").onclick=()=>{
+const type=document.getElementById("transactionType").value;
+let record={type};
+const today=new Date().toISOString().split('T')[0];
+
+if(type==="Cash In"||type==="Cash Out"){
+let date=document.getElementById("cashDate").value||today;
+let mobile=document.getElementById("mobileNumber").value;
+let sender=document.getElementById("senderRecipient").value;
+let amount=document.getElementById("cashAmount").value;
+let charge=document.getElementById("chargeFee").value;
+let reference=document.getElementById("referenceNumber").value;
+if(!date||!mobile||!sender||!amount||!charge||!reference){alert("Fill all fields");return;}
+record.date=date; record.mobile=mobile; record.sender=sender; record.amount=amount; record.reference=reference; record.charge=charge;
+}
+else if(type==="Load"){
+let operator=document.getElementById("loadOperator").value;
+let mobile=document.getElementById("loadNumber").value;
+let amount=document.getElementById("loadAmount").value;
+let charge=document.getElementById("loadChargeFee").value;
+if(!operator||!mobile||!amount){alert("Fill all fields");return;}
+record.date=today; record.mobile=mobile; record.sender=operator; record.amount=amount; record.reference="-"; record.charge=charge;
+}
+else if(type==="Bank / E-Wallet Transfer"){
+let bankType=document.getElementById("bankType").value;
+let date=document.getElementById("bankDate").value||today;
+let amount=document.getElementById("bankAmount").value;
+let name=document.getElementById("accountName").value;
+let number=document.getElementById("accountNumber").value;
+let reference=document.getElementById("referenceBank").value;
+let charge=document.getElementById("bankChargeFee").value;
+if(!bankType||!date||!amount||!name||!number){alert("Fill all fields");return;}
+record.date=date; record.mobile="-"; record.sender="Bank / E-Wallet Transfer"; record.amount=amount; record.reference=reference; record.mode=`${bankType} / ${name}`; record.charge=charge;
+}
+
+records.unshift(record);
+localStorage.setItem("gcashRecords",JSON.stringify(records));
+renderDaily();
+renderPopupRecords();
+clearInputs();
+}
+
+function renderDaily(){
+const today=new Date().toISOString().split('T')[0];
+const table=document.getElementById("dailyRecords"); table.innerHTML="";
+let total=0;
+records.forEach(r=>{
+if(r.date!==today) return;
+let accountSender=r.type==="Bank / E-Wallet Transfer"?r.mode:(r.sender||"-");
+let mobileSender=r.type==="Bank / E-Wallet Transfer"? "-" : (r.mobile||r.sender||"-");
+let row=`<tr>
+<td>${r.date}</td>
+<td>${r.type}</td>
+<td>${mobileSender}</td>
+<td>₱${r.amount}</td>
+<td>${r.reference||"-"}</td>
+<td>${accountSender}</td>
+<td>₱${r.charge}</td>
+</tr>`;
+table.innerHTML+=row;
+total+=parseFloat(r.charge)||0;
+});
+document.getElementById("dailyTotal").innerText=total.toFixed(2);
+}
+
+function renderPopupRecords(){
+const type=document.getElementById("recordsType").value;
+const dateFilter=document.getElementById("recordsDate").value;
+let filtered=records.filter(r=>{
+if(type!=="All"&&r.type!==type) return false;
+if(dateFilter&&r.date!==dateFilter) return false;
+return true;
+});
+const body=document.getElementById("popupRecords");
+const header=document.getElementById("popupHeader");
+header.innerHTML=`<tr><th>Date</th><th>Type</th><th>Mobile / Sender</th><th>Amount</th><th>Reference / Account</th><th>Account / Sender</th><th>Charge / Profit</th></tr>`;
+body.innerHTML="";
+let total=0;
+filtered.forEach(r=>{
+let accountSender=r.type==="Bank / E-Wallet Transfer"?r.mode:(r.sender||"-");
+let mobileSender=r.type==="Bank / E-Wallet Transfer"? "-" : (r.mobile||r.sender||"-");
+
+let row=`
+<tr class="swipe-row" data-index="${records.indexOf(r)}">
+
+<td colspan="7">
+
+<div class="swipe-content">
+
+<table style="width:100%">
+<tr>
+<td>${r.date}</td>
+<td>${r.type}</td>
+<td>${mobileSender}</td>
+<td>₱${r.amount}</td>
+<td>${r.reference||"-"}</td>
+<td>${accountSender}</td>
+<td>₱${r.charge}</td>
+</tr>
+</table>
+
+</div>
+
+<div class="swipe-actions">
+
+<button class="editBtn" onclick="editRecord(${records.indexOf(r)})">✏️</button>
+
+<button class="deleteBtn" onclick="deleteRecord(${records.indexOf(r)})">🗑️</button>
+
+</div>
+
+</td>
+
+</tr>
+`;
+body.innerHTML+=row;
+total+=parseFloat(r.charge)||0;
+});
+document.getElementById("popupTotal").innerText=total.toFixed(2);
+}
+
+function clearInputs(){
+['cashDate','mobileNumber','senderRecipient','cashAmount','chargeFee','referenceNumber',
+'loadOperator','loadNumber','loadAmount','loadChargeFee',
+'bankType','bankDate','bankAmount','accountName','accountNumber','referenceBank','bankChargeFee'].forEach(id=>{
+let el=document.getElementById(id); if(el) el.value="";
+});
+}
+
+document.getElementById("transactionType").dispatchEvent(new Event("change"));
+renderDaily();
+
+function editRecord(index){
+
+let r=records[index];
+
+document.getElementById("transactionType").value=r.type;
+document.getElementById("transactionType").dispatchEvent(new Event("change"));
+
+if(r.type==="Cash In"||r.type==="Cash Out"){
+
+document.getElementById("cashDate").value=r.date;
+document.getElementById("mobileNumber").value=r.mobile;
+document.getElementById("senderRecipient").value=r.sender;
+document.getElementById("cashAmount").value=r.amount;
+document.getElementById("referenceNumber").value=r.reference;
+
+calculateCashCharge();
+
+}
+
+else if(r.type==="Load"){
+
+document.getElementById("loadOperator").value=r.sender;
+document.getElementById("loadNumber").value=r.mobile;
+document.getElementById("loadAmount").value=r.amount;
+
+calculateLoadCharge();
+
+}
+
+else if(r.type==="Bank / E-Wallet Transfer"){
+
+let parts=(r.mode||"").split(" / ");
+
+document.getElementById("bankType").value=parts[0]||"";
+document.getElementById("accountName").value=parts[1]||"";
+
+document.getElementById("bankDate").value=r.date;
+document.getElementById("bankAmount").value=r.amount;
+document.getElementById("accountNumber").value=r.mobile;
+document.getElementById("referenceBank").value=r.reference;
+
+calculateBankCharge();
+
+}
+
+records.splice(index,1);
+
+localStorage.setItem("gcashRecords",JSON.stringify(records));
+
+renderDaily();
+renderPopupRecords();
+
+document.getElementById("recordsPopup").style.display="none";
+}
+
+function deleteRecord(index){
+
+if(confirm("Are you sure you want to delete this transaction?")){
+
+records.splice(index,1);
+
+localStorage.setItem("gcashRecords",JSON.stringify(records));
+
+renderDaily();
+renderPopupRecords();
+
+}
+
+}
+
+document.addEventListener("touchstart",function(e){
+
+let row=e.target.closest(".swipe-row");
+
+if(!row) return;
+
+let startX=e.touches[0].clientX;
+
+row.addEventListener("touchmove",function(ev){
+
+let moveX=ev.touches[0].clientX;
+
+let diff=startX-moveX;
+
+let content=row.querySelector(".swipe-content");
+
+if(diff>0 && diff<120){
+
+content.style.transform="translateX(-"+diff+"px)";
+
+}
+
+});
+
+row.addEventListener("touchend",function(){
+
+let content=row.querySelector(".swipe-content");
+
+content.style.transform="translateX(-120px)";
+
+});
+
+});
+</script>
+
+</body>
+</html>
