@@ -412,71 +412,87 @@ clearInputs();
 }
 
 function renderDaily(){
-const today=new Date().toISOString().split('T')[0];
-const table=document.getElementById("dailyRecords"); table.innerHTML="";
 
-let totalProfit=0;
-// Start from capital
- let gcashBalance = capital.gcash;
- let cashOnHand = capital.cash;
+const today = new Date().toISOString().split('T')[0];
 
+const table = document.getElementById("dailyRecords");
+table.innerHTML="";
+
+let totalProfit = 0;
+
+// Start balances from capital
+let gcashBalance = capital.gcash;
+let cashOnHand = capital.cash;
+
+// LOOP ALL RECORDS for balances
 records.forEach(r=>{
-if(r.date!==today) return;
-let accountSender=r.type==="Bank / E-Wallet Transfer"?r.mode:(r.sender||"-");
-let mobileSender=r.type==="Bank / E-Wallet Transfer"? "-" : (r.mobile||r.sender||"-");
 
-// Update GCash & Cash on Hand based on type
 let amt = parseFloat(r.amount) || 0;
 
-        switch(r.type) {
-            case "Cash In":
-                gcashBalance -= amt;
-                cashOnHand += amt;
-                break;
-            case "Cash Out":
-                gcashBalance += amt;
-                cashOnHand -= amt;
-                break;
-            case "Load":
-                gcashBalance -= amt;
-                cashOnHand += amt;
-                break;
-            case "Bank / E-Wallet Transfer":
-                gcashBalance -= amt;
-                cashOnHand += amt;
-                break;
-            case "Capital Deposit":
+// BALANCE CALCULATION (ALL RECORDS)
+switch(r.type){
 
-            if(r.sender==="GCash") gcashBalance += amt;
-            if(r.sender==="Cash") cashOnHand += amt;
+case "Cash In":
+gcashBalance -= amt;
+cashOnHand += amt;
+break;
 
-        break;
+case "Cash Out":
+gcashBalance += amt;
+cashOnHand -= amt;
+break;
 
-            case "Capital Withdrawal":
+case "Load":
+gcashBalance -= amt;
+cashOnHand += amt;
+break;
 
-            if(r.sender==="GCash") gcashBalance -= amt;
-            if(r.sender==="Cash") cashOnHand -= amt;
+case "Bank / E-Wallet Transfer":
+gcashBalance -= amt;
+cashOnHand += amt;
+break;
 
-        break;
-        }
+case "Capital Deposit":
+if(r.sender==="GCash") gcashBalance += amt;
+if(r.sender==="Cash") cashOnHand += amt;
+break;
 
+case "Capital Withdrawal":
+if(r.sender==="GCash") gcashBalance -= amt;
+if(r.sender==="Cash") cashOnHand -= amt;
+break;
 
+}
 
-let row=`<tr>
+// DAILY TABLE (TODAY ONLY)
+if(r.date === today){
+
+let accountSender = r.type==="Bank / E-Wallet Transfer" ? r.mode : (r.sender || "-");
+let mobileSender = r.type==="Bank / E-Wallet Transfer" ? "-" : (r.mobile || r.sender || "-");
+
+let row = `<tr>
 <td>${r.date}</td>
 <td>${r.type}</td>
 <td>${mobileSender}</td>
 <td>₱${r.amount}</td>
-<td>${r.reference||"-"}</td>
+<td>${r.reference || "-"}</td>
 <td>${accountSender}</td>
 <td>₱${r.charge}</td>
 </tr>`;
-table.innerHTML+=row;
+
+table.innerHTML += row;
+
 totalProfit += parseFloat(r.charge) || 0;
+
+}
+
 });
- document.getElementById("dailyTotal").innerText = totalProfit.toFixed(2);
- document.getElementById("gcashBalance").innerText = gcashBalance.toFixed(2);
- document.getElementById("cashOnHand").innerText = cashOnHand.toFixed(2);
+
+// UPDATE DISPLAY
+document.getElementById("dailyTotal").innerText = totalProfit.toFixed(2);
+document.getElementById("gcashBalance").innerText = gcashBalance.toFixed(2);
+document.getElementById("cashOnHand").innerText = cashOnHand.toFixed(2);
+
 }
 
 function renderPopupRecords(){
