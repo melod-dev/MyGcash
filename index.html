@@ -354,7 +354,7 @@ function updateAllCharges(){calculateCashCharge(); calculateLoadCharge(); calcul
 document.getElementById("addBtn").onclick=()=>{
 const type=document.getElementById("transactionType").value;
 let record={type};
-const today=new Date().toISOString().split('T')[0];
+const today=new Date().toLocaleDateString('en-CA');
 
 if(type==="Cash In"||type==="Cash Out"){
 let date=document.getElementById("cashDate").value||today;
@@ -413,7 +413,7 @@ clearInputs();
 
 function renderDaily(){
 
-const today = new Date().toISOString().split('T')[0];
+const today = new Date().toLocaleDateString('en-CA');
 
 const table = document.getElementById("dailyRecords");
 table.innerHTML="";
@@ -718,3 +718,4 @@ document.getElementById("capitalPopup").onclick = function(e) {
 
 </body>
 </html>
+
